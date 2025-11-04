@@ -5,10 +5,11 @@
 #include <unistd.h>
 #include <syscall.h>
 #include <sys/mman.h>
-#define MIN 5
-#define MAX 32
-#define NUM_ORDERS (MAX_ORDER - MIN_ORDER + 1)
+#define MIN 6       // 2⁶ = 64 bytes -- metadados tem 32, logo não pode ser 32(size_t = 8, bool 8, mb 8)
+#define MAX_SIZE 32 // 2³² = 4GB
+#define NUM_OF_SIZES (MAX_ORDER - MIN_ORDER + 1)
 
+static memory_block *[NUM_ORDERS];
 typedef struct memory_block
 {
     size_t size;
@@ -41,8 +42,15 @@ size_t round_up_to_power_of_2(size_t size)
     }
     return i;
 }
-void *split()
+
+void *split(memory_block *block, size_t target)
 {
+    while (block->size >= target)
+    {
+        size_t half_size = block->size / 2;
+
+        memory_block *buddy = (memory_block *)((char *)block + target);
+    }
 }
 void *merge()
 {
