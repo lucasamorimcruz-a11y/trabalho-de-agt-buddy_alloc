@@ -46,12 +46,9 @@ void *merge()
 }
 bool check_if_block_free(memory_block *block)
 {
-    if (block->is_free == true)
-    {
-        return true;
-    }
-    return false;
+    return block->is_free;
 }
+
 void *my_buddy_malloc(size_t size)
 {
     if (!is_power_of_2(size))
