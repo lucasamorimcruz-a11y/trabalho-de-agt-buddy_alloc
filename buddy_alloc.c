@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <syscall.h>
 #include <sys/mman.h>
+#define HEAP_MAX_SIZE
 
 typedef struct memory_block
 {
@@ -21,6 +22,7 @@ void *heap_initializer(size_t heap_size)
         heap_size,
 
     );
+    void *result = start_of_heap + heap_size;
 }
 
 bool is_power_of_2(size_t number)
@@ -29,14 +31,18 @@ bool is_power_of_2(size_t number)
 }
 size_t round_up_to_power_of_2(size_t size)
 {
+    size_t i = 0;
+    while (i < size)
+    {
+        i *= 2;
+    }
+    return i;
 }
 void *split()
 {
-
 }
 void *merge()
 {
-
 }
 bool check_if_block_free(memory_block *block)
 {
@@ -55,17 +61,17 @@ void *my_buddy_malloc(size_t size)
 }
 void *my_buddy_free()
 {
-    
 }
 void *my_buddy_realloc()
 {
-
 }
 void *my_buddy_calloc()
 {
-
 }
+void *gc_collect()
+{
+}
+
 int main()
 {
-
 }
