@@ -5,7 +5,9 @@
 #include <unistd.h>
 #include <syscall.h>
 #include <sys/mman.h>
-#define HEAP_MAX_SIZE
+#define MIN 5
+#define MAX 32
+#define NUM_ORDERS (MAX_ORDER - MIN_ORDER + 1)
 
 typedef struct memory_block
 {
@@ -14,6 +16,7 @@ typedef struct memory_block
     memory_block *prev;
     memory_block *next;
 } memory_block;
+typedef struct memory_block memory_block;
 
 void *heap_initializer(size_t heap_size)
 {
@@ -22,16 +25,16 @@ void *heap_initializer(size_t heap_size)
         heap_size,
 
     );
-    void *result = start_of_heap + heap_size;
+    return start_of_heap;
 }
 
 bool is_power_of_2(size_t number)
 {
-    return (number & (number - 1) == 0);
+    return number && ((number & (number - 1)) == 0);
 }
 size_t round_up_to_power_of_2(size_t size)
 {
-    size_t i = 0;
+    size_t i = 1;
     while (i < size)
     {
         i *= 2;
