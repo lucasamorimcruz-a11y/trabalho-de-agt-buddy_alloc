@@ -67,7 +67,7 @@ size_t round_up_to_power_of_2(size_t size)
 int search_for_list_index(size_t size)
 {
     int i = 0;
-    while (i < NUMBER_OF_SIZES && ((1 << NUMBER_OF_SIZES) < size))
+    while (i < NUMBER_OF_SIZES && ((1 << (MIN_SIZE +1 )) < size))
     {
         i++;
     }
@@ -96,7 +96,7 @@ void *heap_initialize()
 }
 void *buddy_split(size_t size)
 {
-    int i = search_for_list_index(size);
+        int i = search_for_list_index(size);
     if (free_lists[i] != NULL)
     {
         buddy_block *new_block = free_lists[i];
