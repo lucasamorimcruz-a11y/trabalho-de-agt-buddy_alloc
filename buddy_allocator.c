@@ -67,7 +67,7 @@ size_t round_up_to_power_of_2(size_t size)
 int search_for_list_index(size_t size)
 {
     int i = 0;
-    while (i < NUMBER_OF_SIZES && ((1 << (MIN_SIZE +1 )) < size))
+    while (i < NUMBER_OF_SIZES && ((1 << (MIN_SIZE + 1)) < size))
     {
         i++;
     }
@@ -92,20 +92,32 @@ void *heap_initialize()
     {
         free_lists[i] = NULL;
     }
-    
+    buddy_block *initial_block = buddy_block*heap_start;
+    initial_block->size = heap_size;
+    initial_block->is_free = true;
+    initial_block->next = NULL;
+    initial_block->prev = NULL;
+    free_lists[search_for_list_index(heap_size)] = initial_block;
+
 }
 void *buddy_split(size_t size)
 {
-        int i = search_for_list_index(size);
+    int i = search_for_list_index(size);
     if (free_lists[i] != NULL)
     {
         buddy_block *new_block = free_lists[i];
         free_lists[i] = new_block->next;
         new_block->is_free = false;
     }
+    
 }
 void *buddy_merge(void *ptr)
 {
+    if (ptr == NULL)
+    {
+        return;
+    }
+    
 }
 void *buddy_alloc(size_t size)
 {
@@ -120,6 +132,7 @@ void *buddy_alloc(size_t size)
     buddy_block *new_block;
     if (new_block->size)
     {
+        buddy_block *=
     }
 }
 void *buddy_calloc(size_t number_of_elements, size_t size)
@@ -141,7 +154,7 @@ void *buddy_realloc(void *ptr, size_t size)
         size = round_up_to_power_of_2(size);
     }
     void *ptr_to_location = buddy_alloc(size);
-    memmove(ptr_to_location, ptr, 0/*arrumar */);
+    memmove(ptr_to_location, ptr, 0 /*arrumar */);
 }
 void *buddy_free(void *ptr)
 {
