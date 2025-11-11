@@ -16,11 +16,13 @@ typedef struct buddy_block
 } buddy_block;
 size_t heap_size = (1 << MAX_SIZE);
 buddy_block *free_lists[NUMBER_OF_SIZES];
+void *heap_start = NULL;
 
 /*Funções auxiliares que serão utilizadas ao longo do código.*/
 bool is_power_of_2(size_t size);
 size_t round_up_to_power_of_2(size_t size);
 int search_for_list_index(size_t size);
+void *buddy_adress_calculation(void *ptr, int k);
 /*Funções principais do alocador
 buddy_split é fundamental pro algoritmo de alocação e buddy_merge é fundamental pro algortimo de liberação.
 */
@@ -62,16 +64,71 @@ size_t round_up_to_power_of_2(size_t size)
     int i = 1;
     while (i < size)
     {
-        i *= 2;
+        i <<= 1;
     }
     return i;
 }
 int search_for_list_index(size_t size)
 {
-    while ()
+    int i = 0;
+    while (free_lists[i]->size != size)
+    {
+        i++;
+    }
+
 }
 /*Implementação das funções principais*/
 void *heap_initialize()
 {
-    void *new_heap = (1 < MAX_SIZE);
+    void *heap_start = mmap(
+        NULL,
+        heap_size,
+        PROT_READ | PROT_WRITE,
+        MAP_ANONYMOUS | MAP_PRIVATE,
+        -1,
+        0);
+    if (heap_start == MAP_FAILED)
+    {
+        perror("Erro ao inicializar a heap.");
+        return;
+    }
+    for (int i = 0; i < MAX_SIZE; i++)
+    {
+        *free_lists[i] = NULL;
+    }
+}
+void *buddy_split(size_t size)
+{
+    int i = search_for_list_index(size);
+    if (free_lists[i] != NULL)
+    {
+        buddy_block *new_block = free_lists[i];
+        free_lists[i] = new_block->next;
+        new_block->is_free = false;
+        new_block->size = size;
+    }
+}
+void *buddy_merge(void *ptr)
+{
+}
+void *buddy_alloc(size_t size)
+{
+    if (heap_start == NULL)
+    {
+        heap_initialize();
+    }
+    buddy_block *new_block;
+    if (new_block->size)
+    {
+    }
+}
+void *buddy_calloc(size_t number_of_elements, size_t size)
+{
+}
+void *buddy_realloc(void *ptr, size_t size)
+{
+}
+void *buddy_free(void *ptr)
+{
+    buddy_merge(ptr);
 }
