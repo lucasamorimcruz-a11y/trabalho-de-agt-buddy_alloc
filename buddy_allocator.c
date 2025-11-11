@@ -96,7 +96,7 @@ void *heap_initialize()
 }
 void *buddy_split(size_t size)
 {
-        int i = search_for_list_index(size);
+    int i = search_for_list_index(size);
     if (free_lists[i] != NULL)
     {
         buddy_block *new_block = free_lists[i];
