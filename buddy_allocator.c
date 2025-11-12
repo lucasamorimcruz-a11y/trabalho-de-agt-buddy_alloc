@@ -24,7 +24,7 @@ int search_for_list_index(size_t size);
 void *buddy_adress_calculation(void *ptr, int k);
 
 void *heap_initialize();
-void *buddy_split(size_t size);
+void *buddy_split(size_t size, int index);
 void *buddy_merge(void *ptr);
 void *buddy_alloc(size_t size);
 void *buddy_calloc(size_t number_of_elements, size_t size);
@@ -34,7 +34,7 @@ void *buddy_free(void *ptr);
 /*Testes do código*/
 int main()
 {
-    int *ptr = (int *)buddy_alloc(sizeof(int));
+    int *ptr = buddy_alloc(sizeof(int));
     *ptr = 10;
     printf("%i", *ptr);
     int *second_ptr = (int *)buddy_calloc(5, sizeof(int));
@@ -44,7 +44,7 @@ int main()
     }
     for (int i = 0; i < 4; i++)
     {
-        second_ptr[i] = i + 10;
+        second_ptr[i] += 10;
         printf("%i", second_ptr[i]);
     }
     buddy_realloc((int *)ptr, 3);
@@ -67,13 +67,15 @@ size_t round_up_to_power_of_2(size_t size)
 int search_for_list_index(size_t size)
 {
     int i = 0;
-    while (i < NUMBER_OF_SIZES && ((1 << (MIN_SIZE + 1)) < size))
+    while (i < NUMBER_OF_SIZES - 1 && ((1 << (MIN_SIZE + i)) < size))
     {
         i++;
     }
     return i;
 }
-void *find_free_block();
+void *find_free_block()
+{
+}
 void *heap_initialize()
 {
     heap_start = mmap(
@@ -88,36 +90,59 @@ void *heap_initialize()
         perror("Erro ao inicializar a heap (Sem memória suficiente).");
         return;
     }
-    for (int i = 0; i < MAX_SIZE; i++)
+    for (int i = 0; i < NUMBER_OF_SIZES; i++)
     {
         free_lists[i] = NULL;
     }
-    buddy_block *initial_block = buddy_block*heap_start;
+    buddy_block *initial_block = (buddy_block *)heap_start;
     initial_block->size = heap_size;
     initial_block->is_free = true;
     initial_block->next = NULL;
     initial_block->prev = NULL;
-    free_lists[search_for_list_index(heap_size)] = initial_block;
+    free_lists[NUMBER_OF_SIZES - 1] = initial_block;
+    return initial_block;
+}
 
-}
-void *buddy_split(size_t size)
+// tenho que transformar isso em recursão -> oque tenho que fazer?
+/*fazer a função split com o index, e se o size de new_block da free_list[i] não for igual size, eu recursivamente divido o bloco e chamo a função split(size, index-1).*/
+void *buddy_split(size_t size, int index, int count) // passo max_size como index e count como 0
 {
-    int i = search_for_list_index(size);
-    if (free_lists[i] != NULL)
+    if (size == 0)
     {
-        buddy_block *new_block = free_lists[i];
-        free_lists[i] = new_block->next;
-        new_block->is_free = false;
+        return NULL;
     }
-    
+    if (index < 0)
+    {
+        perror("Não é possível alocar memória");
+        return NULL;
+    }
+    buddy_block *initial_block = free_lists[index];
+    free_lists[index] = initial_block->next;
+
+    if (initial_block->size == size)
+    {
+        return initial_block;
+    }
+    size_t half_of_the_size = size / 2;
+    buddy_block *buddy = free_lists[index - 1];
+    return buddy_split(size, index - 1, count + 1);
 }
+
 void *buddy_merge(void *ptr)
 {
     if (ptr == NULL)
     {
+        perror("Erro ao localizar o bloco de memória");
         return;
     }
-    
+    buddy_block *buddy = buddy_adress_calculation();
+    if (!buddy->is_free)
+    {
+        perror("Não é possível mergir.");
+        return 1;
+    }
+
+    return;
 }
 void *buddy_alloc(size_t size)
 {
@@ -129,14 +154,24 @@ void *buddy_alloc(size_t size)
     {
         size = round_up_to_power_of_2(size);
     }
+    int index = search_for_list_index(size);
     buddy_block *new_block;
-    if (new_block->size)
+    if (new_block->size == *)
     {
         buddy_block *=
     }
 }
 void *buddy_calloc(size_t number_of_elements, size_t size)
 {
+    if (number_of_elements == 0)
+    {
+        return NULL;
+    }
+    if (!is_power_of_2(size))
+    {
+        size = round_up_to_power_of_2(size);
+    }
+    search_for_list_index(size);
 }
 void *buddy_realloc(void *ptr, size_t size)
 {
@@ -154,9 +189,13 @@ void *buddy_realloc(void *ptr, size_t size)
         size = round_up_to_power_of_2(size);
     }
     void *ptr_to_location = buddy_alloc(size);
-    memmove(ptr_to_location, ptr, 0 /*arrumar */);
+    if (ptr_to_location == NULL)
+    {
+        return NULL;
+    }
+    memmove(ptr_to_location, ptr, size);
 }
 void *buddy_free(void *ptr)
 {
-    buddy_merge(ptr);
+    return buddy_merge(ptr);
 }
