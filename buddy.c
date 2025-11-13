@@ -148,4 +148,5 @@ int main(){
         ptr[i] = 10 + i;
         printf("%i", ptr[i]);
     }
+    buddy_free(ptr);
 }
