@@ -40,7 +40,7 @@ int main()
     int *ptr = buddy_alloc(sizeof(int));
     *ptr = 10;
     printf("%i\n", *ptr);
-    buddy_free(*ptr);
+    buddy_free(ptr);
 }
 short int size_to_level(size_t size)
 {
@@ -194,5 +194,5 @@ void *buddy_free(void *ptr)
         return NULL;
     }
     buddy_block *block = get_header_again(ptr);
-    return merge(block);
+    return buddy_merge(block);
 }
