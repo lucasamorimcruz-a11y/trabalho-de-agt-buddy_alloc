@@ -39,20 +39,8 @@ int main()
 {
     int *ptr = buddy_alloc(sizeof(int));
     *ptr = 10;
-    printf("%i", *ptr);
-    int *second_ptr = (int *)buddy_calloc(5, sizeof(int));
-    for (int *i = second_ptr; i < second_ptr + 4; i++)
-    {
-        printf("%i", *i);
-    }
-    for (int i = 0; i < 4; i++)
-    {
-        second_ptr[i] += 10;
-        printf("%i", second_ptr[i]);
-    }
-    buddy_realloc((int *)ptr, 3);
-    buddy_free(ptr);
-    buddy_free(second_ptr);
+    printf("%i\n", *ptr);
+    buddy_free(*ptr);
 }
 short int size_to_level(size_t size)
 {
@@ -95,12 +83,48 @@ void *buddy_split(buddy_block *block)
 }
 void *buddy_merge(buddy_block *block)
 {
+    block->is_free = true;
+    
+    while (block->level < NUMBER_OF_LEVELS - 1){
+        buddy_block *buddy = find_buddy(block);
+        if((void*)buddy < heap_start || (void*)buddy >= heap_start + heap_size || !buddy->is_free || buddy->level != block->level){
+            break;
+        }
+        remove_from_the_list(buddy);
+        block = find_first_block(block);
+        block->level++;
+    }
+    insert_into_list(block);
+    return block;
 }
 void *insert_into_list(buddy_block *block)
 {
+    int level = block->level;
+    block->next = free_lists[level];
+    block->prev = NULL;
+    if (free_lists[level])
+    {
+        free_lists[level]->prev = block;
+    }
+    free_lists[level] = block;
 }
 void *remove_from_the_list(buddy_block *block)
 {
+    int level = block->level;
+    if (block->prev)
+    {
+        free_lists[level]->next = block->next;
+    }
+    else
+    {
+        free_lists[level] = block->next;
+    }
+    if (block->next)
+    {
+        block->next->prev = block->prev;
+    }
+    block->next = NULL;
+    block->prev = NULL;
 }
 void *heap_initialize()
 {
@@ -163,12 +187,12 @@ void *buddy_alloc(size_t size)
         }
     }
 }
-void *buddy_calloc(size_t number_of_elements, size_t size)
-{
-}
-void *buddy_realloc(void *ptr, size_t size)
-{
-}
 void *buddy_free(void *ptr)
 {
+    if (ptr == NULL)
+    {
+        return NULL;
+    }
+    buddy_block *block = get_header_again(ptr);
+    return merge(block);
 }
