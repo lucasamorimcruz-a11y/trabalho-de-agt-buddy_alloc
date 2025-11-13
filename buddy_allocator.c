@@ -113,7 +113,7 @@ void *remove_from_the_list(buddy_block *block)
     int level = block->level;
     if (block->prev)
     {
-        free_lists[level]->next = block->next;
+        block->prev->next = block->next;
     }
     else
     {
@@ -165,7 +165,7 @@ void *buddy_alloc(size_t size)
     int level = size_to_level(size);
 
     buddy_block *block = NULL;
-    for (int i = 0; i < NUMBER_OF_LEVELS; i++)
+    for (int i = level; i < NUMBER_OF_LEVELS; i++)
     {
         if (free_lists[i] != NULL)
         {
@@ -176,7 +176,7 @@ void *buddy_alloc(size_t size)
                 buddy_block *buddy = buddy_split(block);
                 block->level -= 1;
 
-                buddy->level = level;
+                buddy->level = block->level;
                 buddy->is_free = true;
                 buddy->next = NULL;
                 buddy->prev = NULL;
