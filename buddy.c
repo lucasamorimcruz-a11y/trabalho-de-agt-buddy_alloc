@@ -1,179 +1,127 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #define MIN_SIZE 5
 #define MAX_SIZE 20
-#define NUMBER_OF_LEVELS (MAX_SIZE - MIN_SIZE + 1)
-
-typedef struct buddy_block
-{
+#define NUMBER_OF_LEVELS (MAX_SIZE - MIN_SIZE)
+typedef struct buddy_block{
     short int level;
     bool is_free;
     struct buddy_block *next;
     struct buddy_block *prev;
 } buddy_block;
-size_t heap_size = (1 << MAX_SIZE);
-buddy_block *free_lists[NUMBER_OF_LEVELS];
+
+size_t heap_size = 1 << MAX_SIZE;
 void *heap_start = NULL;
+buddy_block *free_lists[NUMBER_OF_LEVELS];
 
-short int size_to_level(size_t size);
-void *find_buddy(buddy_block *block);
-void *find_first_block(buddy_block *block);
-void *skip_header(buddy_block *block);
-void *get_header_again(void *ptr);
-void *buddy_split(buddy_block *block);
-void *buddy_merge(buddy_block *block);
-void insert_into_list(buddy_block *block);
-void remove_from_the_list(buddy_block *block);
-
-void *heap_initialize();
-void *buddy_alloc(size_t size);
-void *buddy_free(void *ptr);
-
-/*Testes do código*/
-int main()
-{
-    int *ptr = buddy_alloc(sizeof(int));
-    *ptr = 10;
-    printf("%i\n", *ptr);
-    buddy_free(ptr);
+void remove_from_list(buddy_block *block){
+    int level = block->level;
+    if (block->prev){
+        block->prev->next = block->next;
+    }
+    else{
+        free_lists[level] = block->next;
+    }
+    if(block->next){
+        block->next->prev = block->prev;
+    }
+    block->next = NULL;
+    block->prev = NULL;
 }
-short int size_to_level(size_t size)
-{
+void insert_into_list(buddy_block *block){
+    int level = block->level;
+    block->next = free_lists[level];
+    block->prev = NULL;
+    if(free_lists[level]){
+        free_lists[level]->prev = block;
+    }
+    free_lists[level] = block;
+}
+
+short int size_to_level(size_t size){
     int level = 0;
-    while (level < NUMBER_OF_LEVELS - 1 && ((1 << (MIN_SIZE + level)) < size + sizeof(buddy_block)))
-    {
+    while ((1 << (level + MIN_SIZE)) < size + sizeof(buddy_block) && level < NUMBER_OF_LEVELS){
         level++;
     }
     return level;
 }
-void *find_buddy(buddy_block *block)
-{
-    long long x = 1 << (block->level + MIN_SIZE);
-    return (buddy_block *)((long long)block ^ x);
+void *find_buddy(buddy_block *block){
+    long long x =  (1 << (block->level + MIN_SIZE));
+    return (buddy_block *)((long long)block^x);
 }
-void *find_first_block(buddy_block *block)
-{
+void *find_first_block(buddy_block *block){
     buddy_block *buddy = find_buddy(block);
-    if (block < buddy)
-    {
-        return block;
-    }
-    else
-    {
+    if (block > buddy){
         return buddy;
     }
+    return block;
 }
-void *skip_header(buddy_block *block)
-{
-    return (void *)(block + 1);
+void *skip_header(buddy_block *block){
+    return (void *)(block+1);
 }
-void *get_header_again(void *ptr)
-{
+void *get_header(void *ptr){
     return ((buddy_block *)ptr - 1);
 }
-void *buddy_split(buddy_block *block)
-{
+void *buddy_split(buddy_block *block){
     int x = 1 << ((block->level - 1) + MIN_SIZE);
     return (buddy_block *)((long long)block | x);
 }
-void *buddy_merge(buddy_block *block)
-{
+void *buddy_merge(buddy_block *block){
     block->is_free = true;
-    
     while (block->level < NUMBER_OF_LEVELS - 1){
         buddy_block *buddy = find_buddy(block);
-        if(!buddy->is_free || buddy->level != block->level){
-            break;
+        if (block->level != buddy->level || !buddy->is_free){
+            break; 
         }
-        remove_from_the_list(buddy);
+        remove_from_list(buddy);
         block = find_first_block(block);
         block->level++;
     }
     insert_into_list(block);
     return block;
 }
-void insert_into_list(buddy_block *block)
-{
-    int level = block->level;
-    block->next = free_lists[level];
-    block->prev = NULL;
-    if (free_lists[level])
-    {
-        free_lists[level]->prev = block;
-    }
-    free_lists[level] = block;
-}
-void remove_from_the_list(buddy_block *block)
-{
-    int level = block->level;
-    if (block->prev)
-    {
-        block->prev->next = block->next;
-    }
-    else
-    {
-        free_lists[level] = block->next;
-    }
-    if (block->next)
-    {
-        block->next->prev = block->prev;
-    }
-    block->next = NULL;
-    block->prev = NULL;
-}
-void *heap_initialize()
-{
+
+void heap_intialize(){
     heap_start = mmap(
         NULL,
         heap_size,
         PROT_READ | PROT_WRITE,
         MAP_ANONYMOUS | MAP_PRIVATE,
         -1,
-        0);
-    if (heap_start == MAP_FAILED)
-    {
-        perror("Erro ao inicializar a heap (Sem memória suficiente).");
-        return NULL;
+        0
+    );
+    if (heap_start == MAP_FAILED){
+        perror("Erro ao alocar a heap");
+        return;
     }
-    for (int i = 0; i < NUMBER_OF_LEVELS; i++)
-    {
+    for (int i = 0; i < NUMBER_OF_LEVELS; i++){
         free_lists[i] = NULL;
     }
-    buddy_block *initial_block = (buddy_block *)heap_start;
-    initial_block->level = NUMBER_OF_LEVELS - 1;
-    initial_block->is_free = true;
-    initial_block->next = NULL;
-    initial_block->prev = NULL;
-    free_lists[NUMBER_OF_LEVELS - 1] = initial_block;
-    return initial_block;
+    buddy_block *first_block = (buddy_block*)heap_start;
+    first_block->level = NUMBER_OF_LEVELS - 1;
+    first_block->is_free = true;
+    first_block->next = NULL;
+    first_block->prev = NULL;
+    free_lists[NUMBER_OF_LEVELS - 1] = first_block;
 }
-void *buddy_alloc(size_t size)
-{
-    if (size == 0)
-    {
+void *buddy_alloc(size_t size){
+    if (heap_start == NULL){
+        heap_intialize();
+    }
+    if (size == 0){
         return NULL;
     }
-    if (heap_start == NULL)
-    {
-        heap_initialize();
-    }
     int level = size_to_level(size);
-
-    buddy_block *block = NULL;
-    for (int i = level; i < NUMBER_OF_LEVELS; i++)
-    {
-        if (free_lists[i] != NULL)
-        {
-            block = free_lists[i];
-            remove_from_the_list(block);
-            while (block->level > level)
-            {
+    for(int i = level; i < NUMBER_OF_LEVELS; i++){
+        if (free_lists[i] != NULL){
+            buddy_block *block = free_lists[i];
+            remove_from_list(block);  
+            while(block->level > level){
                 buddy_block *buddy = buddy_split(block);
-                block->level -= 1;
-
+                block->level--;
                 buddy->level = block->level;
                 buddy->is_free = true;
                 buddy->next = NULL;
@@ -186,12 +134,18 @@ void *buddy_alloc(size_t size)
     }
     return NULL;
 }
-void *buddy_free(void *ptr)
-{
-    if (ptr == NULL)
-    {
-        return NULL;
+void buddy_free(void *ptr){
+    if (ptr == NULL){
+        perror("Não tem o que liberar");
+        return;
     }
-    buddy_block *block = get_header_again(ptr);
-    return buddy_merge(block);
+    buddy_block *block= get_header(ptr);
+    buddy_merge(block);
+}
+int main(){
+    int *ptr = buddy_alloc(100);
+    for (int i = 0; i < (100 / sizeof(int));i++){
+        ptr[i] = 10 + i;
+        printf("%i", ptr[i]);
+    }
 }
