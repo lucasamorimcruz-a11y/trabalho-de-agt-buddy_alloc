@@ -25,13 +25,11 @@ void *skip_header(buddy_block *block);
 void *get_header_again(void *ptr);
 void *buddy_split(buddy_block *block);
 void *buddy_merge(buddy_block *block);
-void *insert_into_list(buddy_block *block);
-void *remove_from_the_list(buddy_block *block);
+void insert_into_list(buddy_block *block);
+void remove_from_the_list(buddy_block *block);
 
 void *heap_initialize();
 void *buddy_alloc(size_t size);
-void *buddy_calloc(size_t number_of_elements, size_t size);
-void *buddy_realloc(void *ptr, size_t size);
 void *buddy_free(void *ptr);
 
 /*Testes do código*/
@@ -97,7 +95,7 @@ void *buddy_merge(buddy_block *block)
     insert_into_list(block);
     return block;
 }
-void *insert_into_list(buddy_block *block)
+void insert_into_list(buddy_block *block)
 {
     int level = block->level;
     block->next = free_lists[level];
@@ -108,7 +106,7 @@ void *insert_into_list(buddy_block *block)
     }
     free_lists[level] = block;
 }
-void *remove_from_the_list(buddy_block *block)
+void remove_from_the_list(buddy_block *block)
 {
     int level = block->level;
     if (block->prev)
@@ -138,7 +136,7 @@ void *heap_initialize()
     if (heap_start == MAP_FAILED)
     {
         perror("Erro ao inicializar a heap (Sem memória suficiente).");
-        NULL;
+        return NULL;
     }
     for (int i = 0; i < NUMBER_OF_LEVELS; i++)
     {
@@ -186,6 +184,7 @@ void *buddy_alloc(size_t size)
             return skip_header(block);
         }
     }
+    return NULL;
 }
 void *buddy_free(void *ptr)
 {
