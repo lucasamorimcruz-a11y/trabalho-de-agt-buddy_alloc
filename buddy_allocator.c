@@ -3,29 +3,32 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/mman.h>
-#define MIN_SIZE 6
+#define MIN_SIZE 5
 #define MAX_SIZE 20
-#define NUMBER_OF_SIZES (MAX_SIZE - MIN_SIZE + 1)
+#define NUMBER_OF_LEVELS (MAX_SIZE - MIN_SIZE + 1)
 
 typedef struct buddy_block
 {
-    size_t size;
+    short int level;
     bool is_free;
     struct buddy_block *next;
     struct buddy_block *prev;
 } buddy_block;
 size_t heap_size = (1 << MAX_SIZE);
-buddy_block *free_lists[NUMBER_OF_SIZES];
+buddy_block *free_lists[NUMBER_OF_LEVELS];
 void *heap_start = NULL;
 
-bool is_power_of_2(size_t size);
-size_t round_up_to_power_of_2(size_t size);
-int search_for_list_index(size_t size);
-void *buddy_adress_calculation(void *ptr, int k);
+short int size_to_level(size_t size);
+void *find_buddy(buddy_block *block);
+void *find_first_block(buddy_block *block);
+void *skip_header(buddy_block *block);
+void *get_header_again(void *ptr);
+void *buddy_split(buddy_block *block);
+void *buddy_merge(buddy_block *block);
+void *insert_into_list(buddy_block *block);
+void *remove_from_the_list(buddy_block *block);
 
 void *heap_initialize();
-void *buddy_split(size_t size, int index);
-void *buddy_merge(void *ptr);
 void *buddy_alloc(size_t size);
 void *buddy_calloc(size_t number_of_elements, size_t size);
 void *buddy_realloc(void *ptr, size_t size);
@@ -51,29 +54,52 @@ int main()
     buddy_free(ptr);
     buddy_free(second_ptr);
 }
-bool is_power_of_2(size_t size)
+short int size_to_level(size_t size)
 {
-    return ((size & (size - 1)) == 0);
-}
-size_t round_up_to_power_of_2(size_t size)
-{
-    int i = 1;
-    while (i < size)
+    int level = 0;
+    while (level < NUMBER_OF_LEVELS - 1 && ((1 << (MIN_SIZE + level)) < size + sizeof(buddy_block)))
     {
-        i <<= 1;
+        level++;
     }
-    return i;
+    return level;
 }
-int search_for_list_index(size_t size)
+void *find_buddy(buddy_block *block)
 {
-    int i = 0;
-    while (i < NUMBER_OF_SIZES - 1 && ((1 << (MIN_SIZE + i)) < size))
-    {
-        i++;
-    }
-    return i;
+    long long x = 1 << (block->level + MIN_SIZE);
+    return (buddy_block *)((long long)block ^ x);
 }
-void *find_free_block()
+void *find_first_block(buddy_block *block)
+{
+    buddy_block *buddy = find_buddy(block);
+    if (block < buddy)
+    {
+        return block;
+    }
+    else
+    {
+        return buddy;
+    }
+}
+void *skip_header(buddy_block *block)
+{
+    return (void *)(block + 1);
+}
+void *get_header_again(void *ptr)
+{
+    return ((buddy_block *)ptr - 1);
+}
+void *buddy_split(buddy_block *block)
+{
+    int x = 1 << ((block->level - 1) + MIN_SIZE);
+    return (buddy_block *)((long long)block | x);
+}
+void *buddy_merge(buddy_block *block)
+{
+}
+void *insert_into_list(buddy_block *block)
+{
+}
+void *remove_from_the_list(buddy_block *block)
 {
 }
 void *heap_initialize()
@@ -88,114 +114,61 @@ void *heap_initialize()
     if (heap_start == MAP_FAILED)
     {
         perror("Erro ao inicializar a heap (Sem memória suficiente).");
-        return;
+        NULL;
     }
-    for (int i = 0; i < NUMBER_OF_SIZES; i++)
+    for (int i = 0; i < NUMBER_OF_LEVELS; i++)
     {
         free_lists[i] = NULL;
     }
     buddy_block *initial_block = (buddy_block *)heap_start;
-    initial_block->size = heap_size;
+    initial_block->level = NUMBER_OF_LEVELS - 1;
     initial_block->is_free = true;
     initial_block->next = NULL;
     initial_block->prev = NULL;
-    free_lists[NUMBER_OF_SIZES - 1] = initial_block;
+    free_lists[NUMBER_OF_LEVELS - 1] = initial_block;
     return initial_block;
 }
-
-// tenho que transformar isso em recursão -> oque tenho que fazer?
-/*fazer a função split com o index, e se o size de new_block da free_list[i] não for igual size, eu recursivamente divido o bloco e chamo a função split(size, index-1).*/
-void *buddy_split(size_t size, int index, int count) // passo max_size como index e count como 0
+void *buddy_alloc(size_t size)
 {
     if (size == 0)
     {
         return NULL;
     }
-    if (index < 0)
-    {
-        perror("Não é possível alocar memória");
-        return NULL;
-    }
-    buddy_block *initial_block = free_lists[index];
-    free_lists[index] = initial_block->next;
-
-    if (initial_block->size == size)
-    {
-        return initial_block;
-    }
-    size_t half_of_the_size = size / 2;
-    buddy_block *buddy = free_lists[index - 1];
-    return buddy_split(size, index - 1, count + 1);
-}
-
-void *buddy_merge(void *ptr)
-{
-    if (ptr == NULL)
-    {
-        perror("Erro ao localizar o bloco de memória");
-        return;
-    }
-    buddy_block *buddy = buddy_adress_calculation();
-    if (!buddy->is_free)
-    {
-        perror("Não é possível mergir.");
-        return 1;
-    }
-
-    return;
-}
-void *buddy_alloc(size_t size)
-{
     if (heap_start == NULL)
     {
         heap_initialize();
     }
-    if (!is_power_of_2(size))
+    int level = size_to_level(size);
+
+    buddy_block *block = NULL;
+    for (int i = 0; i < NUMBER_OF_LEVELS; i++)
     {
-        size = round_up_to_power_of_2(size);
-    }
-    int index = search_for_list_index(size);
-    buddy_block *new_block;
-    if (new_block->size == *)
-    {
-        buddy_block *=
+        if (free_lists[i] != NULL)
+        {
+            block = free_lists[i];
+            remove_from_the_list(block);
+            while (block->level > level)
+            {
+                buddy_block *buddy = buddy_split(block);
+                block->level -= 1;
+
+                buddy->level = level;
+                buddy->is_free = true;
+                buddy->next = NULL;
+                buddy->prev = NULL;
+                insert_into_list(buddy);
+            }
+            block->is_free = false;
+            return skip_header(block);
+        }
     }
 }
 void *buddy_calloc(size_t number_of_elements, size_t size)
 {
-    if (number_of_elements == 0)
-    {
-        return NULL;
-    }
-    if (!is_power_of_2(size))
-    {
-        size = round_up_to_power_of_2(size);
-    }
-    search_for_list_index(size);
 }
 void *buddy_realloc(void *ptr, size_t size)
 {
-    if (ptr == NULL)
-    {
-        return buddy_alloc(size);
-    }
-    if (size == 0)
-    {
-        buddy_free(ptr);
-        return NULL;
-    }
-    if (!is_power_of_2(size))
-    {
-        size = round_up_to_power_of_2(size);
-    }
-    void *ptr_to_location = buddy_alloc(size);
-    if (ptr_to_location == NULL)
-    {
-        return NULL;
-    }
-    memmove(ptr_to_location, ptr, size);
 }
 void *buddy_free(void *ptr)
 {
-    return buddy_merge(ptr);
 }
