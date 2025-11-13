@@ -85,7 +85,7 @@ void *buddy_merge(buddy_block *block)
     
     while (block->level < NUMBER_OF_LEVELS - 1){
         buddy_block *buddy = find_buddy(block);
-        if((void*)buddy < heap_start || (void*)buddy >= heap_start + heap_size || !buddy->is_free || buddy->level != block->level){
+        if(!buddy->is_free || buddy->level != block->level){
             break;
         }
         remove_from_the_list(buddy);
