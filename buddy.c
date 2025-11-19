@@ -50,12 +50,13 @@ void insert_into_list(buddy_block *block)
 
 short int size_to_level(size_t size)
 {
+    size_t total_size = size + sizeof(buddy_block);
     int level = 0;
-    while ((1 << (level + MIN_SIZE)) <= (size + sizeof(buddy_block)) && level < NUMBER_OF_LEVELS)
+    while (level < NUMBER_OF_LEVELS - 1 && (1 << (level + MIN_SIZE)) < total_size)
     {
         level++;
     }
-    if (level > NUMBER_OF_LEVELS)
+    if ((1 << (level + MIN_SIZE)) < total_size)
     {
         return -1;
     }
@@ -142,6 +143,10 @@ void *buddy_alloc(size_t size)
         return NULL;
     }
     int level = size_to_level(size);
+    if (level == -1)
+    {
+        return NULL;
+    }
     for (int i = level; i < NUMBER_OF_LEVELS; i++)
     {
         if (free_lists[i] != NULL)
@@ -185,7 +190,7 @@ int main()
     for (int i = 0; i < (100 / sizeof(int)); i++)
     {
         ptr[i] = 10 + i;
-        printf("%i", ptr[i]);
+        printf("%i\n", ptr[i]);
     }
     buddy_free(ptr);
 }
