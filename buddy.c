@@ -94,13 +94,18 @@ void *buddy_merge(buddy_block *block)
     block->is_free = true;
     while (block->level < NUMBER_OF_LEVELS - 1)
     {
-        buddy_block *buddy = find_buddy(block);
-        if (block->level != buddy->level || !buddy->is_free)
+        buddy_block *buddy = (buddy_block *)find_buddy(block);
+
+        if (!buddy->is_free || buddy->level != block->level)
         {
             break;
         }
+
         remove_from_list(buddy);
-        block = find_first_block(block);
+
+        if (buddy < block) {
+            block = buddy;
+        }
         block->level++;
     }
     insert_into_list(block);
