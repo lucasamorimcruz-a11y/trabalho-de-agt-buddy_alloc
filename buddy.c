@@ -5,7 +5,7 @@
 #include <sys/mman.h>
 #define MIN_SIZE 5
 #define MAX_SIZE 20
-#define NUMBER_OF_LEVELS (MAX_SIZE - MIN_SIZE)
+#define NUMBER_OF_LEVELS (MAX_SIZE - MIN_SIZE + 1)
 typedef struct buddy_block
 {
     short int level;
@@ -64,8 +64,10 @@ short int size_to_level(size_t size)
 }
 void *find_buddy(buddy_block *block)
 {
-    long long x = (1 << (block->level + MIN_SIZE));
-    return (buddy_block *)((long long)block ^ x);
+    size_t size = 1 << (block->level + MIN_SIZE);
+    uintptr_t offset = (uintptr_t)block - (uintptr_t)heap_start;
+    uintptr_t buddy_offset = offset ^ size;
+    return (buddy_block *)((uintptr_t)heap_start + buddy_offset);
 }
 void *find_first_block(buddy_block *block)
 {
@@ -86,8 +88,8 @@ void *get_header(void *ptr)
 }
 void *buddy_split(buddy_block *block)
 {
-    int x = 1 << ((block->level - 1) + MIN_SIZE);
-    return (buddy_block *)((long long)block | x);
+    size_t size = 1 << ((block->level - 1) + MIN_SIZE);
+    return (buddy_block *)((char *)block + size);
 }
 void *buddy_merge(buddy_block *block)
 {
